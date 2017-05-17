@@ -38,8 +38,9 @@ class Dataset(object):
         #   and that token embeddings that are learned in the pretrained model are loaded properly.
         all_tokens_in_pretraining_dataset = []
         if parameters['use_pretrained_model']:
-            pretraining_dataset = pickle.load(open(os.path.join(parameters['pretrained_model_folder'], 'dataset.pickle'), 'rb'))
-            all_tokens_in_pretraining_dataset = pretraining_dataset.index_to_token.values()
+            with open(os.path.join(parameters['pretrained_model_folder'], 'dataset.pickle'), 'rb') as fp:
+                pretraining_dataset = pickle.load(fp)
+                all_tokens_in_pretraining_dataset = pretraining_dataset.index_to_token.values()
 
         self.UNK_TOKEN_INDEX = 0
         self.PADDING_TOKEN_INDEX = 1
@@ -183,6 +184,7 @@ class Dataset(object):
         self.token_indices = token_indices
         self.label_indices = label_indices
         self.token_indices_padded = token_indices_padded
+        self.max_tokens = max([max(token_lengths[dataset_type]) for dataset_type in dataset_filepaths.keys() if len(token_lengths[dataset_type]) > 0])
         self.token_lengths = token_lengths
         self.tokens = tokens
         self.labels = labels
