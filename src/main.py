@@ -35,9 +35,9 @@ def load_parameters(parameters_filepath=os.path.join('.', 'parameters.ini'), ver
     for k, v in parameters.items():
         # If the value is a list delimited with a comma, choose one element at random.
         # Ensure that each parameter is cast to the correct type
-        if k in ['seed', 'train_size', 'valid_size', 'test_size', 'remap_to_unk_count_threshold', 'token_embedding_dimension', 'number_of_cpu_threads', 'number_of_gpus', 'lstm_hidden_state_dimension', 'batch_size', 'da', 'r', 'mlp_hidden_layer_1_units', 'mlp_hidden_layer_2_units']:
+        if k in ['maximum_number_of_epochs', 'patience', 'seed', 'train_size', 'valid_size', 'test_size', 'remap_to_unk_count_threshold', 'token_embedding_dimension', 'number_of_cpu_threads', 'number_of_gpus', 'lstm_hidden_state_dimension', 'batch_size', 'da', 'r', 'mlp_hidden_layer_1_units', 'mlp_hidden_layer_2_units']:
             parameters[k] = int(v)
-        elif k in ['beta']:
+        elif k in ['beta_penalized', 'beta_l2', 'learning_rate', 'gradient_clipping_value', 'dropout_rate']:
             parameters[k] = float(v)
         elif k in ['freeze_token_embeddings', 'do_split', 'remap_unknown_tokens_to_unk', 'verbose', 'debug', 'use_pretrained_model', 'load_only_pretrained_token_embeddings', 'check_for_lowercase', 'check_for_digits_replaced_with_zeros']:
             parameters[k] = distutils.util.strtobool(v)
