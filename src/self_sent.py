@@ -113,8 +113,7 @@ class SelfSent(object):
         with tf.variable_scope("layer_output") as vs:
             W_output = tf.get_variable("W_output", shape=[parameters['mlp_hidden_layer_2_units'], self.dataset.number_of_classes], initializer=initializer)
             b_output = tf.Variable(tf.constant(0.0, shape=[self.dataset.number_of_classes]), name="bias_output")
-            yhat_without_softmax = tf.nn.xw_plus_b(output_relu_2, W_output, b_output, name="output_layer_2")
-            yhat = tf.nn.softmax(yhat_without_softmax)
+            yhat = tf.nn.xw_plus_b(output_relu_2, W_output, b_output, name="y_hat")
             self.layer_output_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
 
