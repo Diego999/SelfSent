@@ -44,8 +44,8 @@ class Dataset(object):
         self.UNK_TOKEN_INDEX = 0
         self.PADDING_TOKEN_INDEX = 1
         self.tokens_mapped_to_unk = []
-        self.UNK = 'UNK'
-        self.PAD = 'PAD'
+        self.UNK = '_UNK_'
+        self.PAD = '_PAD_'
         self.unique_labels = []
         labels = {}
         tokens = {}
@@ -91,7 +91,6 @@ class Dataset(object):
                 if self.verbose: print("token: {0}".format(token))
                 if self.verbose: print("token.lower(): {0}".format(token.lower()))
                 if self.verbose: print("re.sub('\d', '0', token.lower()): {0}".format(re.sub('\d', '0', token.lower())))
-
                 token_to_index[token] = self.UNK_TOKEN_INDEX
                 number_of_unknown_tokens += 1
                 self.tokens_mapped_to_unk.append(token)
@@ -136,6 +135,7 @@ class Dataset(object):
 
         if parameters['remap_unknown_tokens_to_unk'] == 1:
             index_to_token[self.UNK_TOKEN_INDEX] = self.UNK
+        index_to_token[self.PADDING_TOKEN_INDEX] = self.PAD
 
         if self.verbose: print('index_to_token: {0}'.format(index_to_token))
         if self.verbose: print('label_count[\'train\']: {0}'.format(label_count['train']))
