@@ -71,8 +71,8 @@ class SelfSent(object):
 
         # Attention
         with tf.variable_scope("attention") as vs:
-            Ws1 = tf.get_variable("Ws1", shape=[2*parameters['lstm_hidden_state_dimension'], parameters['da']], initializer=initializer)
-            H_reshaped = tf.reshape(H, [-1, 2*parameters['lstm_hidden_state_dimension']], name='H_reshaped')
+            Ws1 = tf.get_variable("Ws1", shape=[2 * parameters['lstm_hidden_state_dimension'], parameters['da']], initializer=initializer)
+            H_reshaped = tf.reshape(H, [-1, 2 * parameters['lstm_hidden_state_dimension']], name='H_reshaped')
             tanh_ws1_time_H = tf.nn.tanh(tf.matmul(H_reshaped, Ws1), name="tanh_ws1_time_H")
 
             Ws2 = tf.get_variable("Ws2", shape=[parameters['da'], parameters['r']], initializer=initializer)
@@ -93,3 +93,29 @@ class SelfSent(object):
             AA_T = tf.matmul(A, A_T, name="AA_T")
             identity = tf.reshape(tf.tile(tf.diag(tf.ones([parameters['r']]), name="diag_identity"), [parameters['batch_size'], 1], name="tile_identity"), [parameters['batch_size'], parameters['r'], parameters['r']], name="identity")
             penalized_term = tf.square(tf.norm(AA_T - identity, ord='euclidean', axis=[1, 2], name="frobenius_norm"), name="penalized_term")
+
+        # Layer ReLU 1
+        with tf.variable_scope("layer_ReLU_1") as vs:
+            flatten_M_T = tf.reshape(M_T, shape=[parameters['batch_size'], parameters['r'] * 2 * parameters['lstm_hidden_state_dimension']], name="flatten_M_T")
+            W_ReLU_1 = tf.get_variable("W_ReLU_1", shape=[parameters['r'] * 2 * parameters['lstm_hidden_state_dimension'], parameters['mlp_hidden_layer_1_units']], initializer=initializer)
+            b_ReLU_1 = tf.Variable(tf.constant(0.0, shape=[parameters['mlp_hidden_layer_1_units']]), name="bias_ReLU_1")
+            output_relu_1 = tf.nn.relu(tf.nn.xw_plus_b(flatten_M_T, W_ReLU_1, b_ReLU_1, name="output_layer_1"), name="output_ReLU_1")
+            self.layer_ReLU_1_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
+
+        # Layer ReLU 2
+        with tf.variable_scope("layer_ReLU_2") as vs:
+            W_ReLU_2 = tf.get_variable("W_ReLU_2", shape=[parameters['mlp_hidden_layer_1_units'], parameters['mlp_hidden_layer_2_units']], initializer=initializer)
+            b_ReLU_2 = tf.Variable(tf.constant(0.0, shape=[parameters['mlp_hidden_layer_2_units']]), name="bias_ReLU_2")
+            output_relu_2 = tf.nn.relu(tf.nn.xw_plus_b(output_relu_1, W_ReLU_2, b_ReLU_2, name="output_layer_2"), name="output_ReLU_2")
+            self.layer_ReLU_2_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
+
+        # Output layer
+        with tf.variable_scope("layer_output") as vs:
+            W_output = tf.get_variable("W_output", shape=[parameters['mlp_hidden_layer_2_units'], self.dataset.number_of_classes], initializer=initializer)
+            b_output = tf.Variable(tf.constant(0.0, shape=[self.dataset.number_of_classes]), name="bias_output")
+            yhat_without_softmax = tf.nn.xw_plus_b(output_relu_2, W_output, b_output, name="output_layer_2")
+            yhat = tf.nn.softmax(yhat_without_softmax)
+            self.layer_output_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
+
+
+
