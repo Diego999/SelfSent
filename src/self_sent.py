@@ -102,18 +102,21 @@ class SelfSent(object):
             output_relu_1 = tf.nn.relu(tf.nn.xw_plus_b(flatten_M_T, W_ReLU_1, b_ReLU_1, name="output_layer_1"), name="output_ReLU_1")
             self.layer_ReLU_1_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
+        '''
+        Not Sure if in the paper there are 2 hidden layers or only one
         # Layer ReLU 2
         with tf.variable_scope("layer_ReLU_2") as vs:
             W_ReLU_2 = tf.get_variable("W_ReLU_2", shape=[parameters['mlp_hidden_layer_1_units'], parameters['mlp_hidden_layer_2_units']], initializer=initializer)
             b_ReLU_2 = tf.Variable(tf.constant(0.0, shape=[parameters['mlp_hidden_layer_2_units']]), name="bias_ReLU_2")
             output_relu_2 = tf.nn.relu(tf.nn.xw_plus_b(output_relu_1, W_ReLU_2, b_ReLU_2, name="output_layer_2"), name="output_ReLU_2")
             self.layer_ReLU_2_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
+        '''
 
         # Output layer
         with tf.variable_scope("layer_output") as vs:
             W_output = tf.get_variable("W_output", shape=[parameters['mlp_hidden_layer_2_units'], self.dataset.number_of_classes], initializer=initializer)
             b_output = tf.Variable(tf.constant(0.0, shape=[self.dataset.number_of_classes]), name="bias_output")
-            yhat = tf.nn.xw_plus_b(output_relu_2, W_output, b_output, name="y_hat")
+            yhat = tf.nn.xw_plus_b(output_relu_1, W_output, b_output, name="y_hat")
             self.layer_output_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
 
