@@ -1,5 +1,6 @@
 import os
 import tensorflow as tf
+import numpy as np
 import warnings
 import configparser
 import random
@@ -10,9 +11,11 @@ import dataset as ds
 import sys
 import time
 import copy
+import train
 from self_sent import SelfSent
 import pickle
 import dill
+from tensorflow.contrib.tensorboard.plugins import projector
 
 
 warnings.filterwarnings('ignore')
@@ -137,6 +140,26 @@ def main():
                 # Instantiate the model
                 # graph initialization should be before FileWriter, otherwise the graph will not appear in TensorBoard
                 model = SelfSent(dataset, parameters)
+
+                # Instantiate the writers for TensorBoard
+                writers = {}
+                for dataset_type in dataset_filepaths.keys():
+                    writers[dataset_type] = tf.summary.FileWriter(tensorboard_log_folders[dataset_type], graph=sess.graph)
+                embedding_writer = tf.summary.FileWriter(model_folder)  # embedding_writer has to write in model_folder, otherwise TensorBoard won't be able to view embeddings
+
+                embeddings_projector_config = projector.ProjectorConfig()
+                tensorboard_token_embeddings = embeddings_projector_config.embeddings.add()
+                tensorboard_token_embeddings.tensor_name = model.token_embedding_weights.name
+                token_list_file_path = os.path.join(model_folder, 'tensorboard_metadata_tokens.tsv')
+                tensorboard_token_embeddings.metadata_path = os.path.relpath(token_list_file_path, '..')
+
+                projector.visualize_embeddings(embedding_writer, embeddings_projector_config)
+
+                # Write metadata for TensorBoard embeddings
+                token_list_file = open(token_list_file_path, 'w', encoding='UTF-8')
+                for token_index in range(dataset.vocabulary_size):
+                    token_list_file.write('{0}\n'.format(dataset.index_to_token[token_index]))
+                token_list_file.close()
 
 if __name__ == "__main__":
     main()
