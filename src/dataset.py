@@ -292,6 +292,7 @@ class Dataset(object):
 
         random.shuffle(data)
         dataset_filepaths = {}
+        dataset_filepaths['deploy'] = None
         for dataset_type in ['train', 'valid', 'test']:
             size = parameters[dataset_type + '_size']
             data_set = data[:size]
