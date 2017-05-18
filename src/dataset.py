@@ -57,10 +57,11 @@ class Dataset(object):
         # Look for max length
         for dataset_type in ['train', 'valid', 'test', 'deploy']:
             max_tokens = self._find_max_length(dataset_filepaths.get(dataset_type, None), force_preprocessing=parameters['do_split'])
-            if parameters['max_length_sentence'] != -1:
+            if parameters['max_length_sentence'] == -1:
                 self.max_tokens = max(self.max_tokens, max_tokens)
             else:
-                self.max_tokens = max_tokens
+                if self.max_tokens == -1:
+                    self.max_tokens = max_tokens
                 self.max_tokens = min(parameters['max_length_sentence'], self.max_tokens)
 
         for dataset_type in ['train', 'valid', 'test', 'deploy']:
