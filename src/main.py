@@ -160,7 +160,7 @@ def main():
                             pass
                         elif epoch_number != 0:
                             total_loss, total_accuracy = train.train_step(sess, dataset, model, parameters)
-                            print('Mean loss: {:.2f}\tMean accuracy: {:.2f}'.format(np.mean(total_loss), np.mean(total_accuracy)))
+                            print('Mean loss: {:.2f}\tMean accuracy: {:.2f}'.format(np.mean(total_loss), np.mean(total_accuracy)), flush=True)
 
                         epoch_elapsed_training_time = time.time() - epoch_start_time
                         print('Training completed in {0:.2f} seconds'.format(epoch_elapsed_training_time), flush=True)

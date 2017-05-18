@@ -99,7 +99,7 @@ def prediction_step(sess, dataset, dataset_type, model, stats_graph_folder, epoc
             new_line.append(t[-1])
             classification_report.append('\t'.join(new_line))
         classification_report = '\n'.join(classification_report)
-        print(classification_report)
+        print(classification_report, flush=True)
         with open(output_filepath + '_evaluation.txt', 'a', encoding='utf-8') as fp:
             fp.write(classification_report)
 

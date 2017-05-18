@@ -52,8 +52,19 @@ class Dataset(object):
         tokens = {}
         token_count = {}
         label_count = {}
+
+        self.max_tokens = -1
+        # Look for max length
         for dataset_type in ['train', 'valid', 'test', 'deploy']:
-            labels[dataset_type], tokens[dataset_type], token_count[dataset_type], label_count[dataset_type] = self._parse_dataset(dataset_filepaths.get(dataset_type, None), force_preprocessing=parameters['do_split'])
+            max_tokens = self._find_max_length(dataset_filepaths.get(dataset_type, None), force_preprocessing=parameters['do_split'])
+            if parameters['max_length_sentence'] != -1:
+                self.max_tokens = max(self.max_tokens, max_tokens)
+            else:
+                self.max_tokens = max_tokens
+                self.max_tokens = min(parameters['max_length_sentence'], self.max_tokens)
+
+        for dataset_type in ['train', 'valid', 'test', 'deploy']:
+            labels[dataset_type], tokens[dataset_type], token_count[dataset_type], label_count[dataset_type] = self._parse_dataset(dataset_filepaths.get(dataset_type, None), force_preprocessing=parameters['do_split'], limit=self.max_tokens)
 
             if self.verbose: print("dataset_type: {0}".format(dataset_type))
             if self.verbose: print("len(token_count[dataset_type]): {0}".format(len(token_count[dataset_type])))
@@ -171,15 +182,6 @@ class Dataset(object):
             for label in labels[dataset_type]:
                 label_indices[dataset_type].append(label_to_index[label])
 
-        self.max_tokens = max([max(token_lengths[dataset_type]) for dataset_type in dataset_filepaths.keys() if len(token_lengths[dataset_type]) > 0])
-        self.max_tokens = min(parameters['max_length_sentence'], self.max_tokens)
-
-        # Resize sentences > self.max_toksn
-        for dataset_type in dataset_filepaths.keys():
-            token_indices[dataset_type] = [x[:self.max_tokens] for x in token_indices[dataset_type]]
-            token_lengths[dataset_type] = [min(x, self.max_tokens) for x in token_lengths[dataset_type]]
-            tokens[dataset_type] = [x[:self.max_tokens] for x in tokens[dataset_type]]
-
         # Pad tokens
         for dataset_type in dataset_filepaths.keys():
             token_indices_padded[dataset_type] = []
@@ -223,7 +225,7 @@ class Dataset(object):
         elapsed_time = time.time() - start_time
         print('done ({0:.2f} seconds)'.format(elapsed_time))
 
-    def _parse_dataset(self, dataset_filepath, force_preprocessing=False):
+    def _parse_dataset(self, dataset_filepath, force_preprocessing=False, limit=-1):
         token_count = {}
         label_count = {}
 
@@ -242,6 +244,10 @@ class Dataset(object):
                         token_sequence = []
                         for token_found in self.annotators.parse_doc(parsed_data['text'])['sentences']:
                             token_sequence += token_found['tokens']
+
+                        if limit != -1:
+                            token_sequence = token_sequence[:limit]
+
                         tokens.append(token_sequence)
                         labels.append(int(parsed_data['stars']))
 
@@ -259,6 +265,23 @@ class Dataset(object):
                     pickle.dump(obj, fp)
 
         return labels, tokens, token_count, label_count
+
+    def _find_max_length(self, dataset_filepath, force_preprocessing=False):
+        max_length = 0
+        if dataset_filepath:
+            dataset_filepath_pickle = dataset_filepath.replace('.json', '_max.pickle')
+            if os.path.isfile(dataset_filepath_pickle) and not force_preprocessing:
+                with open(dataset_filepath_pickle, 'rb') as fp:
+                    return pickle.load(fp)
+            else:
+                with open(dataset_filepath, 'r', encoding='utf-8') as fp:
+                    for sample in fp:
+                        parsed_data = json.loads(sample, encoding='utf-8')
+                        max_length = max(max_length, sum([len(sentence['tokens']) for sentence in self.annotators.parse_doc(parsed_data['text'])['sentences']]))
+                    with open(dataset_filepath_pickle, 'wb') as fp:
+                        pickle.dump(max_length, fp)
+
+        return max_length
 
     def _do_split(self, parameters):
         data = []
