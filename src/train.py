@@ -87,9 +87,10 @@ def prediction_step(sess, dataset, dataset_type, model, stats_graph_folder, epoc
 
 
     if dataset_type != 'deploy':
-        classification_report = sklearn.metrics.classification_report(all_y_true, [pred[0] for pred in all_predictions], digits=4, labels=dataset.unique_labels)
+        all_y_pred = [pred[0] for pred in all_predictions]
+        classification_report = sklearn.metrics.classification_report(all_y_true, all_y_pred, digits=4, labels=dataset.unique_labels)
         lines = classification_report.split('\n')
-        classification_report = []
+        classification_report = ['Accuracy: {:05.2f}%'.format(sklearn.metrics.accuracy_score(all_y_true, all_y_pred) * 100)]
         for line in lines[2: (len(lines) - 1)]:
             new_line = []
             t = line.strip().replace('avg / total', 'micro-avg').split()
@@ -99,7 +100,7 @@ def prediction_step(sess, dataset, dataset_type, model, stats_graph_folder, epoc
             new_line.append(t[-1])
             classification_report.append('\t'.join(new_line))
         classification_report = '\n'.join(classification_report)
-        print(classification_report, flush=True)
+        print('\n\n' + classification_report + '\n', flush=True)
         with open(output_filepath + '_evaluation.txt', 'a', encoding='utf-8') as fp:
             fp.write(classification_report)
 
