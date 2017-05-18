@@ -172,6 +172,13 @@ class Dataset(object):
                 label_indices[dataset_type].append(label_to_index[label])
 
         self.max_tokens = max([max(token_lengths[dataset_type]) for dataset_type in dataset_filepaths.keys() if len(token_lengths[dataset_type]) > 0])
+        self.max_tokens = min(parameters['max_length_sentence'], self.max_tokens)
+
+        # Resize sentences > self.max_toksn
+        for dataset_type in dataset_filepaths.keys():
+            token_indices[dataset_type] = [x[:self.max_tokens] for x in token_indices[dataset_type]]
+            token_lengths[dataset_type] = [min(x, self.max_tokens) for x in token_lengths[dataset_type]]
+            tokens[dataset_type] = [x[:self.max_tokens] for x in tokens[dataset_type]]
 
         # Pad tokens
         for dataset_type in dataset_filepaths.keys():
