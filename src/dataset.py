@@ -53,7 +53,7 @@ class Dataset(object):
         token_count = {}
         label_count = {}
         for dataset_type in ['train', 'valid', 'test', 'deploy']:
-            labels[dataset_type], tokens[dataset_type], token_count[dataset_type], label_count[dataset_type] = self._parse_dataset(dataset_filepaths.get(dataset_type, None))
+            labels[dataset_type], tokens[dataset_type], token_count[dataset_type], label_count[dataset_type] = self._parse_dataset(dataset_filepaths.get(dataset_type, None), force_preprocessing=parameters['do_split'])
 
             if self.verbose: print("dataset_type: {0}".format(dataset_type))
             if self.verbose: print("len(token_count[dataset_type]): {0}".format(len(token_count[dataset_type])))
@@ -166,13 +166,17 @@ class Dataset(object):
                 token_indices[dataset_type].append([token_to_index[token] for token in token_sequence])
                 token_lengths[dataset_type].append(len(token_sequence))
 
-            if len(token_lengths[dataset_type]) > 0:
-                longest_token_length_in_sequence = max(token_lengths[dataset_type])
-                token_indices_padded[dataset_type] = [utils.pad_list(temp_token_indices, longest_token_length_in_sequence, self.PADDING_TOKEN_INDEX) for temp_token_indices in token_indices[dataset_type]]
-
+            # Labels
             label_indices[dataset_type] = []
             for label in labels[dataset_type]:
                 label_indices[dataset_type].append(label_to_index[label])
+
+        self.max_tokens = max([max(token_lengths[dataset_type]) for dataset_type in dataset_filepaths.keys() if len(token_lengths[dataset_type]) > 0])
+
+        # Pad tokens
+        for dataset_type in dataset_filepaths.keys():
+            token_indices_padded[dataset_type] = []
+            token_indices_padded[dataset_type] = [utils.pad_list(temp_token_indices, self.max_tokens, self.PADDING_TOKEN_INDEX) for temp_token_indices in token_indices[dataset_type]]
 
         if self.verbose: print('token_lengths[\'train\'][0:10]: {0}'.format(token_lengths['train'][0:10]))
         if self.verbose: print('token_indices[\'train\'][0][0:10]: {0}'.format(token_indices['train'][0][0:10]))
@@ -184,7 +188,6 @@ class Dataset(object):
         self.token_indices = token_indices
         self.label_indices = label_indices
         self.token_indices_padded = token_indices_padded
-        self.max_tokens = max([max(token_lengths[dataset_type]) for dataset_type in dataset_filepaths.keys() if len(token_lengths[dataset_type]) > 0])
         self.token_lengths = token_lengths
         self.tokens = tokens
         self.labels = labels
@@ -202,10 +205,18 @@ class Dataset(object):
 
         self.infrequent_token_indices = infrequent_token_indices
 
+        # Binarize label
+        label_vector_indices = {}
+        for dataset_type, labels in label_indices.items():
+            label_vector_indices[dataset_type] = []
+            for label in labels:
+                label_vector_indices[dataset_type].append(utils.convert_one_hot(label, self.number_of_classes))
+        self.label_vector_indices = label_vector_indices
+
         elapsed_time = time.time() - start_time
         print('done ({0:.2f} seconds)'.format(elapsed_time))
 
-    def _parse_dataset(self, dataset_filepath):
+    def _parse_dataset(self, dataset_filepath, force_preprocessing=False):
         token_count = {}
         label_count = {}
 
@@ -213,7 +224,7 @@ class Dataset(object):
         labels = []
         if dataset_filepath:
             dataset_filepath_pickle = dataset_filepath.replace('json', 'pickle')
-            if os.path.isfile(dataset_filepath_pickle):
+            if os.path.isfile(dataset_filepath_pickle) and not force_preprocessing:
                 with open(dataset_filepath_pickle, 'rb') as fp:
                     return pickle.load(fp)
             else:

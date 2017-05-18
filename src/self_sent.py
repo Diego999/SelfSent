@@ -1,5 +1,8 @@
 import tensorflow as tf
 import utils_tf
+import time
+import utils_nlp
+import re
 
 
 class SelfSent(object):
@@ -11,7 +14,7 @@ class SelfSent(object):
         # Placeholders for input, output and dropout
         self.input_token_indices = tf.placeholder(tf.int32, [parameters['batch_size'], self.dataset.max_tokens], name="input_token_indices")
         self.input_token_lengths = tf.placeholder(tf.int32, [parameters['batch_size']], name="input_token_lengths")
-        self.input_label_indices = tf.placeholder(tf.float32, [parameters['batch_size'], dataset.number_of_classes], name="input_label_indices")
+        self.input_label_vector_indices = tf.placeholder(tf.float32, [parameters['batch_size'], dataset.number_of_classes], name="input_label_indices")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
 
         # Internal parameters
@@ -90,6 +93,7 @@ class SelfSent(object):
 
         '''
         Not Sure if in the paper there are 2 hidden layers or only one
+        Don't forget to change shape of W_output
         # Layer ReLU 2
         with tf.variable_scope("layer_ReLU_2") as vs:
             W_ReLU_2 = tf.get_variable("W_ReLU_2", shape=[parameters['mlp_hidden_layer_1_units'], parameters['mlp_hidden_layer_2_units']], initializer=initializer)
@@ -103,13 +107,14 @@ class SelfSent(object):
 
         # Output layer
         with tf.variable_scope("layer_output") as vs:
-            W_output = tf.get_variable("W_output", shape=[parameters['mlp_hidden_layer_2_units'], self.dataset.number_of_classes], initializer=initializer)
+            W_output = tf.get_variable("W_output", shape=[parameters['mlp_hidden_layer_1_units'], self.dataset.number_of_classes], initializer=initializer)
             if self.verbose: print("W_output: {0}".format(W_output))
             b_output = tf.Variable(tf.constant(0.0, shape=[self.dataset.number_of_classes]), name="bias_output")
             if self.verbose: print("b_output: {0}".format(b_output))
 
             final_output = tf.nn.xw_plus_b(output_relu_1, W_output, b_output, name="y_hat")
-            self.yhat = tf.argmax(final_output, 1, name="predictions")
+            self.yhat = tf.argmax(final_output, dimension=1, name="predictions")
+            self.confidence = tf.reduce_max(tf.nn.softmax(final_output), axis=1, name="confidence")
             if self.verbose: print("final_output: {0}".format(final_output))
             if self.verbose: print("yhat: {0}".format(self.yhat))
 
@@ -117,12 +122,12 @@ class SelfSent(object):
 
         # Loss
         with tf.variable_scope("loss"):
-            losses = tf.nn.softmax_cross_entropy_with_logits(logits=final_output, labels=self.input_label_indices, name='softmax')
+            losses = tf.nn.softmax_cross_entropy_with_logits(logits=final_output, labels=self.input_label_vector_indices, name='softmax')
             L2 = parameters['beta_l2'] * tf.add_n([tf.nn.l2_loss(param) for param in tf.trainable_variables()])
             self.loss = tf.reduce_mean(losses, name='cross_entropy_mean_loss') + self.penalized_term + L2
 
         with tf.variable_scope("accuracy"):
-            correct_predictions = tf.equal(self.yhat, tf.argmax(self.input_label_indices, 1))
+            correct_predictions = tf.equal(self.yhat, tf.argmax(self.input_label_vector_indices, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, 'float'), name='accuracy')
 
         self.define_training_procedure(parameters)
@@ -145,6 +150,77 @@ class SelfSent(object):
         # By defining a global_step variable and passing it to the optimizer we allow TensorFlow handle the counting of training steps for us.
         # The global step will be automatically incremented by one every time you execute train_op.
         self.train_op = self.optimizer.apply_gradients(grads_and_vars, global_step=self.global_step)
+
+    # TODO: maybe move out of the class?
+    def load_pretrained_token_embeddings(self, sess, dataset, parameters):
+        if parameters['token_pretrained_embedding_filepath'] == '':
+            return
+        # Load embeddings
+        start_time = time.time()
+        print('Load token embeddings... ', end='', flush=True)
+        token_to_vector = utils_nlp.load_pretrained_token_embeddings(parameters)
+
+        initial_weights = sess.run(self.token_embedding_weights.read_value())
+        number_of_loaded_word_vectors = 0
+        number_of_token_original_case_found = 0
+        number_of_token_lowercase_found = 0
+        number_of_token_digits_replaced_with_zeros_found = 0
+        number_of_token_lowercase_and_digits_replaced_with_zeros_found = 0
+        for token in dataset.token_to_index.keys():
+            if token in token_to_vector.keys():
+                initial_weights[dataset.token_to_index[token]] = token_to_vector[token]
+                number_of_token_original_case_found += 1
+            elif parameters['check_for_lowercase'] and token.lower() in token_to_vector.keys():
+                initial_weights[dataset.token_to_index[token]] = token_to_vector[token.lower()]
+                number_of_token_lowercase_found += 1
+            elif parameters['check_for_digits_replaced_with_zeros'] and re.sub('\d', '0', token) in token_to_vector.keys():
+                initial_weights[dataset.token_to_index[token]] = token_to_vector[re.sub('\d', '0', token)]
+                number_of_token_digits_replaced_with_zeros_found += 1
+            elif parameters['check_for_lowercase'] and parameters['check_for_digits_replaced_with_zeros'] and re.sub('\d', '0', token.lower()) in token_to_vector.keys():
+                initial_weights[dataset.token_to_index[token]] = token_to_vector[re.sub('\d', '0', token.lower())]
+                number_of_token_lowercase_and_digits_replaced_with_zeros_found += 1
+            else:
+                continue
+            number_of_loaded_word_vectors += 1
+        elapsed_time = time.time() - start_time
+        print('done ({0:.2f} seconds)'.format(elapsed_time))
+        print("number_of_token_original_case_found: {0}".format(number_of_token_original_case_found))
+        print("number_of_token_lowercase_found: {0}".format(number_of_token_lowercase_found))
+        print("number_of_token_digits_replaced_with_zeros_found: {0}".format(number_of_token_digits_replaced_with_zeros_found))
+        print("number_of_token_lowercase_and_digits_replaced_with_zeros_found: {0}".format(number_of_token_lowercase_and_digits_replaced_with_zeros_found))
+        print('number_of_loaded_word_vectors: {0}'.format(number_of_loaded_word_vectors))
+        print("dataset.vocabulary_size: {0}".format(dataset.vocabulary_size))
+        sess.run(self.token_embedding_weights.assign(initial_weights))
+
+    def load_embeddings_from_pretrained_model(self, sess, dataset, pretraining_dataset, pretrained_embedding_weights, embedding_type='token'):
+        if embedding_type == 'token':
+            embedding_weights = self.token_embedding_weights
+            index_to_string = dataset.index_to_token
+            pretraining_string_to_index = pretraining_dataset.token_to_index
+
+        # Load embeddings
+        start_time = time.time()
+        print('Load {0} embeddings from pretrained model... '.format(embedding_type), end='', flush=True)
+        initial_weights = sess.run(embedding_weights.read_value())
+
+        if embedding_type == 'token':
+            initial_weights[dataset.UNK_TOKEN_INDEX] = pretrained_embedding_weights[pretraining_dataset.UNK_TOKEN_INDEX]
+            initial_weights[dataset.PADDING_TOKEN_INDEX] = pretrained_embedding_weights[pretraining_dataset.PADDING_TOKEN_INDEX]
+
+        number_of_loaded_vectors = 1
+        for index, string in index_to_string.items():
+            if index == dataset.UNK_TOKEN_INDEX or index == dataset.PADDING_TOKEN_INDEX:
+                continue
+            if string in pretraining_string_to_index.keys():
+                initial_weights[index] = pretrained_embedding_weights[pretraining_string_to_index[string]]
+                number_of_loaded_vectors += 1
+        elapsed_time = time.time() - start_time
+        print('done ({0:.2f} seconds)'.format(elapsed_time))
+        print("number_of_loaded_vectors: {0}".format(number_of_loaded_vectors))
+        if embedding_type == 'token':
+            print("dataset.vocabulary_size: {0}".format(dataset.vocabulary_size))
+
+        sess.run(embedding_weights.assign(initial_weights))
 
 
 def bidirectional_LSTM(input, hidden_state_dimension, initializer, batch_size, sequence_length):

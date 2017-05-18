@@ -3,6 +3,7 @@ Miscellaneous utility functions for natural language processing
 '''
 import re
 
+
 def load_tokens_from_pretrained_token_embeddings(parameters):
     count = -1
     tokens = set()
@@ -18,6 +19,23 @@ def load_tokens_from_pretrained_token_embeddings(parameters):
             number_of_loaded_word_vectors += 1
 
     return tokens
+
+
+def load_pretrained_token_embeddings(parameters):
+    file_input = open(parameters['token_pretrained_embedding_filepath'], 'r', encoding='UTF-8')
+    count = -1
+    token_to_vector = {}
+    for cur_line in file_input:
+        count += 1
+        #if count > 1000:break
+        cur_line = cur_line.strip()
+        cur_line = cur_line.split(' ')
+        if len(cur_line)==0:continue
+        token = cur_line[0]
+        vector =cur_line[1:]
+        token_to_vector[token] = vector
+    file_input.close()
+    return token_to_vector
 
 
 def is_token_in_pretrained_embeddings(token, all_pretrained_tokens, parameters):

@@ -6,6 +6,21 @@ import operator
 import os
 import time
 import datetime
+import shutil
+
+
+# https://stackoverflow.com/questions/8290397/how-to-split-an-iterable-in-constant-size-chunks
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
+
+def convert_one_hot(y_label, class_size):
+    vec = [0] * class_size
+    vec[y_label] = 1
+
+    return vec
 
 
 def order_dictionary(dictionary, mode, reverse=False):
@@ -112,3 +127,14 @@ def convert_configparser_to_dictionary(config):
     my_config_parser_dict = {s:dict(config.items(s)) for s in config.sections()}
     return my_config_parser_dict
 
+def copytree(src, dst, symlinks=False, ignore=None):
+    '''
+    http://stackoverflow.com/questions/1868714/how-do-i-copy-an-entire-directory-of-files-into-an-existing-directory-using-pyth
+    '''
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)
