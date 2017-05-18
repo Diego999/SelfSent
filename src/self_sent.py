@@ -1,5 +1,4 @@
 import tensorflow as tf
-import utils_tf
 import time
 import utils_nlp
 import re
@@ -25,7 +24,6 @@ class SelfSent(object):
             self.token_embedding_weights = tf.get_variable("token_embedding_weights", shape=[dataset.vocabulary_size, parameters['token_embedding_dimension']], initializer=initializer, trainable=not parameters['freeze_token_embeddings'])
             token_lstm_input = tf.nn.embedding_lookup(self.token_embedding_weights, self.input_token_indices)
             if self.verbose: print("token_lstm_input: {0}".format(token_lstm_input))
-            utils_tf.variable_summaries(self.token_embedding_weights)
 
         # Add dropout
         with tf.variable_scope("dropout"):
@@ -33,10 +31,9 @@ class SelfSent(object):
             if self.verbose: print("token_lstm_input_drop: {0}".format(token_lstm_input_drop))
 
         # BiLSTM
-        with tf.variable_scope("token_lstm") as vs:
+        with tf.variable_scope("token_lstm"):
             H = bidirectional_LSTM(token_lstm_input_drop, parameters['lstm_hidden_state_dimension'], initializer, parameters['batch_size'], self.input_token_lengths)
             if self.verbose: print("H: {0}".format(H))
-            self.token_lstm_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
         # Because we use batch, H is a 3D matrix while Ws1 and Ws2 are 2D matrix.
         # To simplify the computation:
@@ -44,7 +41,7 @@ class SelfSent(object):
         # M^T = H^T * A^T = H^T * softmax(tanh(H * Ws1^T) * Ws2^T)
 
         # Attention
-        with tf.variable_scope("attention") as vs:
+        with tf.variable_scope("attention"):
             Ws1 = tf.get_variable("Ws1", shape=[2 * parameters['lstm_hidden_state_dimension'], parameters['da']], initializer=initializer)
             if self.verbose: print("Ws1: {0}".format(Ws1))
 
@@ -61,7 +58,6 @@ class SelfSent(object):
             # The final softmax should be applied for the dimension corresponding to the tokens
             A_T = tf.nn.softmax(tf.reshape(tanh_Ws1_time_H_and_time_Ws2, shape=[parameters['batch_size'], self.dataset.max_tokens, parameters['r']], name="A_T_no_softmax"), dim=1, name="A_T")
             if self.verbose: print("A_T: {0}".format(A_T))
-            self.attention_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
         # Apply Attention
         with tf.variable_scope("apply_attention"):
@@ -78,7 +74,7 @@ class SelfSent(object):
             if self.verbose: print("penalized_term: {0}".format(self.penalized_term))
 
         # Layer ReLU 1
-        with tf.variable_scope("layer_ReLU_1") as vs:
+        with tf.variable_scope("layer_ReLU_1"):
             flatten_M_T = tf.reshape(M_T, shape=[parameters['batch_size'], parameters['r'] * 2 * parameters['lstm_hidden_state_dimension']], name="flatten_M_T")
 
             W_ReLU_1 = tf.get_variable("W_ReLU_1", shape=[parameters['r'] * 2 * parameters['lstm_hidden_state_dimension'], parameters['mlp_hidden_layer_1_units']], initializer=initializer)
@@ -89,24 +85,21 @@ class SelfSent(object):
             output_relu_1 = tf.nn.relu(tf.nn.xw_plus_b(flatten_M_T, W_ReLU_1, b_ReLU_1, name="output_layer_1"), name="output_ReLU_1")
             if self.verbose: print("output_relu_1: {0}".format(output_relu_1))
 
-            self.layer_ReLU_1_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
-
         '''
         Not Sure if in the paper there are 2 hidden layers or only one
         Don't forget to change shape of W_output
         # Layer ReLU 2
-        with tf.variable_scope("layer_ReLU_2") as vs:
+        with tf.variable_scope("layer_ReLU_2"):
             W_ReLU_2 = tf.get_variable("W_ReLU_2", shape=[parameters['mlp_hidden_layer_1_units'], parameters['mlp_hidden_layer_2_units']], initializer=initializer)
             if self.verbose: print("W_ReLU_2: {0}".format(W_ReLU_2))
             b_ReLU_2 = tf.Variable(tf.constant(0.0, shape=[parameters['mlp_hidden_layer_2_units']]), name="bias_ReLU_2")
             if self.verbose: print("b_ReLU_2: {0}".format(b_ReLU_2))
             
             output_relu_2 = tf.nn.relu(tf.nn.xw_plus_b(output_relu_1, W_ReLU_2, b_ReLU_2, name="output_layer_2"), name="output_ReLU_2")
-            self.layer_ReLU_2_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
         '''
 
         # Output layer
-        with tf.variable_scope("layer_output") as vs:
+        with tf.variable_scope("layer_output") :
             W_output = tf.get_variable("W_output", shape=[parameters['mlp_hidden_layer_1_units'], self.dataset.number_of_classes], initializer=initializer)
             if self.verbose: print("W_output: {0}".format(W_output))
             b_output = tf.Variable(tf.constant(0.0, shape=[self.dataset.number_of_classes]), name="bias_output")
@@ -117,8 +110,6 @@ class SelfSent(object):
             self.confidence = tf.reduce_max(tf.nn.softmax(final_output), axis=1, name="confidence")
             if self.verbose: print("final_output: {0}".format(final_output))
             if self.verbose: print("yhat: {0}".format(self.yhat))
-
-            self.layer_output_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=vs.name)
 
         # Loss
         with tf.variable_scope("loss"):
@@ -131,7 +122,6 @@ class SelfSent(object):
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, 'float'), name='accuracy')
 
         self.define_training_procedure(parameters)
-        self.summary_op = tf.summary.merge_all()
 
     def define_training_procedure(self, parameters):
         self.global_step = tf.Variable(0, name="global_step", trainable=False)

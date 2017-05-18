@@ -127,6 +127,7 @@ def convert_configparser_to_dictionary(config):
     my_config_parser_dict = {s:dict(config.items(s)) for s in config.sections()}
     return my_config_parser_dict
 
+
 def copytree(src, dst, symlinks=False, ignore=None):
     '''
     http://stackoverflow.com/questions/1868714/how-do-i-copy-an-entire-directory-of-files-into-an-existing-directory-using-pyth

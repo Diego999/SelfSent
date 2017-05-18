@@ -129,39 +129,12 @@ def main():
                 with open(os.path.join(model_folder, file_params), 'w') as parameters_file:
                     conf_parameters.write(parameters_file)
 
-                tensorboard_log_folder = os.path.join(stats_graph_folder, 'tensorboard_logs')
-                utils.create_folder_if_not_exists(tensorboard_log_folder)
-                tensorboard_log_folders = {}
-                for dataset_type in dataset_filepaths.keys():
-                    tensorboard_log_folders[dataset_type] = os.path.join(stats_graph_folder, 'tensorboard_logs', dataset_type)
-                    utils.create_folder_if_not_exists(tensorboard_log_folders[dataset_type])
-
                 # TODO
                 #dill.dump(dataset, open(os.path.join(model_folder, 'dataset.pickle'), 'wb'))
 
                 # Instantiate the model
                 # graph initialization should be before FileWriter, otherwise the graph will not appear in TensorBoard
                 model = SelfSent(dataset, parameters)
-
-                # Instantiate the writers for TensorBoard
-                writers = {}
-                for dataset_type in dataset_filepaths.keys():
-                    writers[dataset_type] = tf.summary.FileWriter(tensorboard_log_folders[dataset_type], graph=sess.graph)
-                embedding_writer = tf.summary.FileWriter(model_folder)  # embedding_writer has to write in model_folder, otherwise TensorBoard won't be able to view embeddings
-
-                embeddings_projector_config = projector.ProjectorConfig()
-                tensorboard_token_embeddings = embeddings_projector_config.embeddings.add()
-                tensorboard_token_embeddings.tensor_name = model.token_embedding_weights.name
-                token_list_file_path = os.path.join(model_folder, 'tensorboard_metadata_tokens.tsv')
-                tensorboard_token_embeddings.metadata_path = os.path.relpath(token_list_file_path, '..')
-
-                projector.visualize_embeddings(embedding_writer, embeddings_projector_config)
-
-                # Write metadata for TensorBoard embeddings
-                token_list_file = open(token_list_file_path, 'w', encoding='UTF-8')
-                for token_index in range(dataset.vocabulary_size):
-                    token_list_file.write('{0}\n'.format(dataset.index_to_token[token_index]))
-                token_list_file.close()
 
                 # Initialize the model
                 sess.run(tf.global_variables_initializer())
@@ -199,12 +172,6 @@ def main():
 
                         # Save model
                         model_saver.save(sess, os.path.join(model_folder, 'model_{0:05d}.ckpt'.format(epoch_number)))
-
-                        # Save TensorBoard logs
-                        summary = sess.run(model.summary_op, feed_dict=None)
-                        writers['train'].add_summary(summary, epoch_number)
-                        writers['train'].flush()
-                        utils.copytree(writers['train'].get_logdir(), model_folder)
 
                         # Early stop
                         valid_accuracy = results['epoch'][epoch_number][0]['valid']['accuracy_score']

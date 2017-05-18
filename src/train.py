@@ -5,7 +5,6 @@ import sklearn.metrics
 #from evaluate import remap_labels
 from pprint import pprint
 import pickle
-import utils_tf
 import main
 import codecs
 import utils_nlp
