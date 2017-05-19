@@ -11,3 +11,5 @@ lib/*
 trained_models/*
 
 bechmarks.xlsx
+
+benchmarks.xlsx

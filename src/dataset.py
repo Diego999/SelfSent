@@ -16,9 +16,27 @@ class Dataset(object):
         self.verbose = verbose
         self.debug = debug
 
+    def load_deploy(self, dataset_filepath, parameters, annotator):
+        _, tokens, _, _ = self._parse_dataset(dataset_filepath, annotator, force_preprocessing=parameters['do_split'], limit=self.max_tokens)
+        self.tokens['deploy'] = tokens
+
+        # Map tokens and labels to their indices
+        self.token_indices['deploy'] = []
+        self.token_lengths['deploy'] = []
+        self.token_indices_padded['deploy'] = []
+
+        # Tokens
+        for token_sequence in tokens:
+            self.token_indices['deploy'].append([self.token_to_index[token] for token in token_sequence])
+            self.token_lengths['deploy'].append(len(token_sequence))
+
+        # Pad tokens
+        self.token_indices_padded['deploy'] = []
+        self.token_indices_padded['deploy'] = [utils.pad_list(temp_token_indices, self.max_tokens, self.PADDING_TOKEN_INDEX) for temp_token_indices in self.token_indices['deploy']]
+
     def load_dataset(self, dataset_filepaths, parameters, annotator):
         '''
-            dataset_filepaths : dictionary with keys 'train', 'valid', 'test', 'deploy'
+            dataset_filepaths : dictionary with keys 'train', 'valid', 'test'
         '''
         start_time = time.time()
         print('Load dataset... ', end='', flush=True)
@@ -34,10 +52,6 @@ class Dataset(object):
         # Load pretraining dataset to ensure that index to label is compatible to the pretrained model,
         #   and that token embeddings that are learned in the pretrained model are loaded properly.
         all_tokens_in_pretraining_dataset = []
-        if parameters['use_pretrained_model']:
-            with open(os.path.join(parameters['pretrained_model_folder'], 'dataset.pickle'), 'rb') as fp:
-                pretraining_dataset = pickle.load(fp)
-                all_tokens_in_pretraining_dataset = pretraining_dataset.index_to_token.values()
 
         self.UNK_TOKEN_INDEX = 0
         self.PADDING_TOKEN_INDEX = 1
@@ -52,7 +66,7 @@ class Dataset(object):
 
         self.max_tokens = -1
         # Look for max length
-        for dataset_type in ['train', 'valid', 'test', 'deploy']:
+        for dataset_type in ['train', 'valid', 'test']:
             max_tokens = self._find_max_length(dataset_filepaths.get(dataset_type, None), annotator, force_preprocessing=parameters['do_split'])
             if parameters['max_length_sentence'] == -1:
                 self.max_tokens = max(self.max_tokens, max_tokens)
@@ -61,23 +75,23 @@ class Dataset(object):
                     self.max_tokens = max_tokens
                 self.max_tokens = min(parameters['max_length_sentence'], self.max_tokens)
 
-        for dataset_type in ['train', 'valid', 'test', 'deploy']:
+        for dataset_type in ['train', 'valid', 'test']:
             labels[dataset_type], tokens[dataset_type], token_count[dataset_type], label_count[dataset_type] = self._parse_dataset(dataset_filepaths.get(dataset_type, None), annotator, force_preprocessing=parameters['do_split'], limit=self.max_tokens)
 
             if self.verbose: print("dataset_type: {0}".format(dataset_type))
             if self.verbose: print("len(token_count[dataset_type]): {0}".format(len(token_count[dataset_type])))
 
         token_count['all'] = {}
-        for token in list(token_count['train'].keys()) + list(token_count['valid'].keys()) + list(token_count['test'].keys()) + list(token_count['deploy'].keys()):
-            token_count['all'][token] = token_count['train'].get(token, 0) + token_count['valid'].get(token, 0) + token_count['test'].get(token, 0) + token_count['deploy'].get(token, 0)
+        for token in list(token_count['train'].keys()) + list(token_count['valid'].keys()) + list(token_count['test'].keys()):
+            token_count['all'][token] = token_count['train'].get(token, 0) + token_count['valid'].get(token, 0) + token_count['test'].get(token, 0)
 
         for dataset_type in dataset_filepaths.keys():
             if self.verbose: print("dataset_type: {0}".format(dataset_type))
             if self.verbose: print("len(token_count[dataset_type]): {0}".format(len(token_count[dataset_type])))
 
         label_count['all'] = {}
-        for character in list(label_count['train'].keys()) + list(label_count['valid'].keys()) + list(label_count['test'].keys()) + list(label_count['deploy'].keys()):
-            label_count['all'][character] = label_count['train'].get(character, 0) + label_count['valid'].get(character, 0) + label_count['test'].get(character, 0) + label_count['deploy'].get(character, 0)
+        for character in list(label_count['train'].keys()) + list(label_count['valid'].keys()) + list(label_count['test'].keys()):
+            label_count['all'][character] = label_count['train'].get(character, 0) + label_count['valid'].get(character, 0) + label_count['test'].get(character, 0)
 
         token_count['all'] = utils.order_dictionary(token_count['all'], 'value_key', reverse=True)
         label_count['all'] = utils.order_dictionary(label_count['all'], 'key', reverse=False)
@@ -118,21 +132,12 @@ class Dataset(object):
         if self.verbose: print("len(token_count['train']): {0}".format(len(token_count['train'])))
         if self.verbose: print("len(infrequent_token_indices): {0}".format(len(infrequent_token_indices)))
 
-        if parameters['use_pretrained_model']:
-            self.unique_labels = sorted(list(pretraining_dataset.label_to_index.keys()))
-            # Make sure labels are compatible with the pretraining dataset.
-            for label in label_count['all']:
-                if label not in pretraining_dataset.label_to_index:
-                    raise AssertionError("The label {0} does not exist in the pretraining dataset. ".format(label) +
-                                         "Please ensure that only the following labels exist in the dataset: {0}".format(', '.join(self.unique_labels)))
-            label_to_index = pretraining_dataset.label_to_index.copy()
-        else:
-            label_to_index = {}
-            iteration_number = 0
-            for label, count in label_count['all'].items():
-                label_to_index[label] = iteration_number
-                iteration_number += 1
-                self.unique_labels.append(label)
+        label_to_index = {}
+        iteration_number = 0
+        for label, count in label_count['all'].items():
+            label_to_index[label] = iteration_number
+            iteration_number += 1
+            self.unique_labels.append(label)
 
         if self.verbose: print('self.unique_labels: {0}'.format(self.unique_labels))
         if self.verbose: print('token_count[\'train\'][0:10]: {0}'.format(list(token_count['train'].items())[0:10]))
@@ -229,7 +234,7 @@ class Dataset(object):
 
         tokens = []
         labels = []
-        if dataset_filepath:
+        if dataset_filepath != '':
             dataset_filepath_pickle = dataset_filepath.replace('json', 'pickle')
             if os.path.isfile(dataset_filepath_pickle) and not force_preprocessing:
                 with open(dataset_filepath_pickle, 'rb') as fp:
@@ -247,16 +252,18 @@ class Dataset(object):
                             token_sequence = token_sequence[:limit]
 
                         tokens.append(token_sequence)
-                        labels.append(int(parsed_data['stars']))
+                        if 'stars' in parsed_data:
+                            labels.append(int(parsed_data['stars']))
 
                         for token in token_sequence:
                             if token not in token_count:
                                 token_count[token] = 0
                             token_count[token] += 1
 
-                        if labels[-1] not in label_count:
-                            label_count[labels[-1]] = 0
-                        label_count[labels[-1]] += 1
+                        if len(labels) > 0:
+                            if labels[-1] not in label_count:
+                                label_count[labels[-1]] = 0
+                            label_count[labels[-1]] += 1
 
                 with open(dataset_filepath_pickle, 'wb') as fp:
                     obj = [labels, tokens, token_count, label_count]
@@ -289,7 +296,6 @@ class Dataset(object):
 
         random.shuffle(data)
         dataset_filepaths = {}
-        dataset_filepaths['deploy'] = None
         for dataset_type in ['train', 'valid', 'test']:
             size = parameters[dataset_type + '_size']
             data_set = data[:size]

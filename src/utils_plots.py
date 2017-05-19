@@ -11,6 +11,29 @@ import sklearn.preprocessing
 from matplotlib import cm
 
 
+def visualize_attention(token_with_attention, labels, output_folder, conf_threshold):
+    # Sort by y_pred
+    output = {k:[] for k in labels}
+    for t in token_with_attention:
+        output[t[0]].append((t[2], t[3]))
+
+    # Create HTML files (see https://www.quora.com/How-do-I-plot-attention-heatmap-on-sentences-for-sentiment-analysis)
+    for k, v in output.items():
+        with open(output_folder + '{}_ge_{:.2f}.html'.format(k, conf_threshold), 'w', encoding='utf-8') as fp:
+            fp.write('<!DOCTYPE html>\n<html>\n<head>\n<title>{0} STARS</title>\n<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>\n<script>\nwindow.onload=function()'.format(k) + '{\n')
+            for i, (tokens, attentions) in enumerate(v):
+                fp.write('var words_{0} = ['.format(i) + '\n')
+                res = ''
+                for t, a in zip(tokens, attentions):
+                    res += '{' + "'word': '{}', 'attention': {:.2f}".format(t.replace("\\", "\\\\").replace("'", "\\'").replace("/", "\\/"), 1.0 - a) + '}, '
+                fp.write(res[:-2] + '];\n')
+                fp.write("$('#text_" + str(i) + "').html($.map(words_" + str(i) + ", function(w) {return '<span style=\"background-color:hsl(360,100%,' + (w.attention * 50 + 50) + '%)\">' + w.word + ' </span>'}))\n")
+            fp.write('}\n</script>\n</head>\n<body>\n')
+            for i in range(len(v)):
+                fp.write('<div id="text_{0}"></div><p></p>\n'.format(i))
+            fp.write('</body>\n</html>')
+
+
 def get_cmap():
     '''
     http://stackoverflow.com/questions/37517587/how-can-i-change-the-intensity-of-a-colormap-in-matplotlib

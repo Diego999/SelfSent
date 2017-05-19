@@ -56,19 +56,19 @@ class SelfSent(object):
             if self.verbose: print("tanh_Ws1_time_H_and_time_Ws2: {0}".format(tanh_Ws1_time_H_and_time_Ws2))
 
             # The final softmax should be applied for the dimension corresponding to the tokens
-            A_T = tf.nn.softmax(tf.reshape(tanh_Ws1_time_H_and_time_Ws2, shape=[parameters['batch_size'], self.dataset.max_tokens, parameters['r']], name="A_T_no_softmax"), dim=1, name="A_T")
-            if self.verbose: print("A_T: {0}".format(A_T))
+            self.A_T = tf.nn.softmax(tf.reshape(tanh_Ws1_time_H_and_time_Ws2, shape=[parameters['batch_size'], self.dataset.max_tokens, parameters['r']], name="A_T_no_softmax"), dim=1, name="A_T")
+            if self.verbose: print("A_T: {0}".format(self.A_T))
 
         # Apply Attention
         with tf.variable_scope("apply_attention"):
             H_T = tf.transpose(H, perm=[0, 2, 1], name="H_T")
-            M_T = tf.matmul(H_T, A_T, name="M_T_no_transposed")
+            M_T = tf.matmul(H_T, self.A_T, name="M_T_no_transposed")
             if self.verbose: print("M_T: {0}".format(M_T))
 
         # Compute penalization term
         with tf.variable_scope("penalization_term"):
-            A = tf.transpose(A_T, perm=[0, 2, 1], name="A")
-            AA_T = tf.matmul(A, A_T, name="AA_T")
+            A = tf.transpose(self.A_T, perm=[0, 2, 1], name="A")
+            AA_T = tf.matmul(A, self.A_T, name="AA_T")
             identity = tf.reshape(tf.tile(tf.diag(tf.ones([parameters['r']]), name="diag_identity"), [parameters['batch_size'], 1], name="tile_identity"), [parameters['batch_size'], parameters['r'], parameters['r']], name="identity")
             self.penalized_term = tf.square(tf.norm(AA_T - identity, ord='euclidean', axis=[1, 2], name="frobenius_norm"), name="penalized_term")
             if self.verbose: print("penalized_term: {0}".format(self.penalized_term))

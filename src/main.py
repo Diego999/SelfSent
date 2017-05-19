@@ -5,6 +5,7 @@ import warnings
 import configparser
 import random
 import utils
+import utils_plots
 import distutils.util
 import pprint
 import dataset as ds
@@ -41,7 +42,7 @@ def load_parameters(parameters_filepath=os.path.join('.', 'parameters.ini'), ver
         # Ensure that each parameter is cast to the correct type
         if k in ['max_length_sentence', 'maximum_number_of_epochs', 'patience', 'seed', 'train_size', 'valid_size', 'test_size', 'remap_to_unk_count_threshold', 'token_embedding_dimension', 'number_of_cpu_threads', 'number_of_gpus', 'lstm_hidden_state_dimension', 'batch_size', 'da', 'r', 'mlp_hidden_layer_1_units']:
             parameters[k] = int(v)
-        elif k in ['beta_penalized', 'beta_l2', 'learning_rate', 'gradient_clipping_value', 'dropout_rate']:
+        elif k in ['attention_visualization_conf', 'beta_penalized', 'beta_l2', 'learning_rate', 'gradient_clipping_value', 'dropout_rate']:
             parameters[k] = float(v)
         elif k in ['train_model', 'freeze_token_embeddings', 'do_split', 'remap_unknown_tokens_to_unk', 'verbose', 'debug', 'use_pretrained_model', 'load_only_pretrained_token_embeddings', 'check_for_lowercase', 'check_for_digits_replaced_with_zeros']:
             parameters[k] = distutils.util.strtobool(v)
@@ -55,7 +56,7 @@ def load_parameters(parameters_filepath=os.path.join('.', 'parameters.ini'), ver
 def get_valid_dataset_filepaths(parameters):
     dataset_filepaths = {}
     dataset_brat_folders = {}
-    for dataset_type in ['train', 'valid', 'test', 'deploy']:
+    for dataset_type in ['train', 'valid', 'test']:
         dataset_filepaths[dataset_type] = os.path.join(parameters['dataset_folder'], '{0}.json'.format(dataset_type))
 
         # Json files exists
@@ -156,16 +157,35 @@ def main():
 
                         if parameters['use_pretrained_model'] and epoch_number == 0:
                             # Restore pretrained model parameters
-                            # TODO
-                            pass
+                            dataset = train.restore_model_parameters_from_pretrained_model(parameters, dataset, sess, model_saver)
+                            dataset.load_deploy(os.path.join(parameters['dataset_folder'], '{0}.json'.format('deploy')), parameters, annotator)
+                            y_pred, y_true, output_filepaths, attentions = train.predict_labels(sess, model, parameters, dataset, epoch_number, stats_graph_folder, dataset_filepaths, only_deploy=True)
+                            y_pred = y_pred['deploy']
+
+                            # Compute attention
+                            tokens_with_attentions = []
+                            for sample_id in range(len(y_pred)):
+                                # Keep only high confidence
+                                if y_pred[sample_id][1] >= parameters['attention_visualization_conf']:
+                                    attention = attentions[int(sample_id / parameters['batch_size'])][sample_id % parameters['batch_size']]
+                                    # Remove padded dimension
+                                    attention = attention[:dataset.token_lengths['deploy'][sample_id]]
+                                    # Sum over columns (we combine all the annotation vectors)
+                                    attention = np.sum(attention, axis=1)
+                                    # Normalize to sum at 1
+                                    attention = attention / np.linalg.norm(attention)
+                                    tokens_with_attentions.append((y_pred[sample_id][0], y_pred[sample_id][1], dataset.tokens['deploy'][sample_id], attention))
+
+                            utils_plots.visualize_attention(tokens_with_attentions, dataset.unique_labels, output_filepaths['deploy'][:output_filepaths['deploy'].rfind('/')+1], parameters['attention_visualization_conf'])
+                            break
                         elif epoch_number != 0:
                             total_loss, total_accuracy = train.train_step(sess, dataset, model, parameters)
-                            print('Mean loss: {:.2f}\tMean accuracy: {:.2f}'.format(np.mean(total_loss), np.mean(total_accuracy)), flush=True)
+                            print('Mean loss: {:.2f}\tMean accuracy: {:.2f}'.format(np.mean(total_loss), 100.0*np.mean(total_accuracy)), flush=True)
 
                         epoch_elapsed_training_time = time.time() - epoch_start_time
                         print('Training completed in {0:.2f} seconds'.format(epoch_elapsed_training_time), flush=True)
 
-                        y_pred, y_true, output_filepaths = train.predict_labels(sess, model, parameters, dataset, epoch_number, stats_graph_folder, dataset_filepaths)
+                        y_pred, y_true, output_filepaths, _ = train.predict_labels(sess, model, parameters, dataset, epoch_number, stats_graph_folder, dataset_filepaths)
 
                         # Evaluate model: save and plot results
                         evaluate.evaluate_model(results, dataset, y_pred, y_true, stats_graph_folder, epoch_number, epoch_start_time, output_filepaths, parameters)
@@ -182,7 +202,7 @@ def main():
                         else:
                             bad_counter += 1
                         print("The last {0} epochs have not shown improvements on the validation set.".format(bad_counter))
-                        print("Best valid with test performances: {:05.2f}%\t{:05.2f}%".format(previous_best_valid_accuracy, previous_best_test_accuracy))
+                        print("Best valid with test performances (epoch {0}): {:05.2f}%\t{:05.2f}%".format(epoch_number-bad_counter, previous_best_valid_accuracy, previous_best_test_accuracy))
                         if bad_counter >= parameters['patience']:
                             print('Early Stop!')
                             results['execution_details']['early_stop'] = True
