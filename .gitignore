@@ -5,8 +5,9 @@
 *.project
 *.pydevproject
 output/*
-data/word_vectors/*
-data/yelp-2016/*
+data/*
 lib/*
 .idea/*
+trained_models/*
 
+bechmarks.xlsx
