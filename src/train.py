@@ -85,7 +85,6 @@ def prediction_step(sess, dataset, dataset_type, model, stats_graph_folder, epoc
         step += parameters['batch_size']
         print('Predicting {0:.2f}% done'.format(step / len(dataset.token_lengths[dataset_type]) * 100), end='\r', flush=True)
 
-
     if dataset_type != 'deploy':
         all_y_pred = [pred[0] for pred in all_predictions]
         classification_report = sklearn.metrics.classification_report(all_y_true, all_y_pred, digits=4, labels=dataset.unique_labels)

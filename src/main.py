@@ -18,7 +18,8 @@ import pickle
 import dill
 import evaluate
 from tensorflow.contrib.tensorboard.plugins import projector
-
+import matplotlib
+matplotlib.use('Agg')  # http://stackoverflow.com/questions/2801882/generating-a-png-with-matplotlib-when-display-is-undefined
 
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
