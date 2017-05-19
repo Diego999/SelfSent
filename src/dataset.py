@@ -1,12 +1,10 @@
 import json
-import pprint
 import os
 import time
 import pickle
 import utils_nlp
 import utils
 import random
-import stanford_corenlp_pywrapper
 import re
 
 
@@ -18,12 +16,11 @@ class Dataset(object):
         self.verbose = verbose
         self.debug = debug
 
-    def load_dataset(self, dataset_filepaths, parameters):
+    def load_dataset(self, dataset_filepaths, parameters, annotator):
         '''
             dataset_filepaths : dictionary with keys 'train', 'valid', 'test', 'deploy'
         '''
         start_time = time.time()
-        self.annotators = stanford_corenlp_pywrapper.CoreNLP(configdict={'annotators': 'tokenize, ssplit', 'ssplit.eolonly': True}, corenlp_jars=[parameters['stanford_folder'] + '/*'])
         print('Load dataset... ', end='', flush=True)
 
         if parameters['do_split']:
@@ -56,7 +53,7 @@ class Dataset(object):
         self.max_tokens = -1
         # Look for max length
         for dataset_type in ['train', 'valid', 'test', 'deploy']:
-            max_tokens = self._find_max_length(dataset_filepaths.get(dataset_type, None), force_preprocessing=parameters['do_split'])
+            max_tokens = self._find_max_length(dataset_filepaths.get(dataset_type, None), annotator, force_preprocessing=parameters['do_split'])
             if parameters['max_length_sentence'] == -1:
                 self.max_tokens = max(self.max_tokens, max_tokens)
             else:
@@ -65,7 +62,7 @@ class Dataset(object):
                 self.max_tokens = min(parameters['max_length_sentence'], self.max_tokens)
 
         for dataset_type in ['train', 'valid', 'test', 'deploy']:
-            labels[dataset_type], tokens[dataset_type], token_count[dataset_type], label_count[dataset_type] = self._parse_dataset(dataset_filepaths.get(dataset_type, None), force_preprocessing=parameters['do_split'], limit=self.max_tokens)
+            labels[dataset_type], tokens[dataset_type], token_count[dataset_type], label_count[dataset_type] = self._parse_dataset(dataset_filepaths.get(dataset_type, None), annotator, force_preprocessing=parameters['do_split'], limit=self.max_tokens)
 
             if self.verbose: print("dataset_type: {0}".format(dataset_type))
             if self.verbose: print("len(token_count[dataset_type]): {0}".format(len(token_count[dataset_type])))
@@ -226,7 +223,7 @@ class Dataset(object):
         elapsed_time = time.time() - start_time
         print('done ({0:.2f} seconds)'.format(elapsed_time))
 
-    def _parse_dataset(self, dataset_filepath, force_preprocessing=False, limit=-1):
+    def _parse_dataset(self, dataset_filepath, annotator, force_preprocessing=False, limit=-1):
         token_count = {}
         label_count = {}
 
@@ -243,7 +240,7 @@ class Dataset(object):
                         parsed_data = json.loads(sample, encoding='utf-8')
 
                         token_sequence = []
-                        for token_found in self.annotators.parse_doc(parsed_data['text'])['sentences']:
+                        for token_found in annotator.parse_doc(parsed_data['text'])['sentences']:
                             token_sequence += token_found['tokens']
 
                         if limit != -1:
@@ -267,7 +264,7 @@ class Dataset(object):
 
         return labels, tokens, token_count, label_count
 
-    def _find_max_length(self, dataset_filepath, force_preprocessing=False):
+    def _find_max_length(self, dataset_filepath, annotator, force_preprocessing=False):
         max_length = 0
         if dataset_filepath:
             dataset_filepath_pickle = dataset_filepath.replace('.json', '_max.pickle')
@@ -278,7 +275,7 @@ class Dataset(object):
                 with open(dataset_filepath, 'r', encoding='utf-8') as fp:
                     for sample in fp:
                         parsed_data = json.loads(sample, encoding='utf-8')
-                        max_length = max(max_length, sum([len(sentence['tokens']) for sentence in self.annotators.parse_doc(parsed_data['text'])['sentences']]))
+                        max_length = max(max_length, sum([len(sentence['tokens']) for sentence in annotator.parse_doc(parsed_data['text'])['sentences']]))
                     with open(dataset_filepath_pickle, 'wb') as fp:
                         pickle.dump(max_length, fp)
 

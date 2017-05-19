@@ -4,10 +4,8 @@ matplotlib.use('Agg')  # http://stackoverflow.com/questions/2801882/generating-a
 import matplotlib.pyplot as plt
 import sklearn.metrics
 import os
-#import utils_plots
 import json
 import time
-import utils_nlp
 import utils_plots
 
 

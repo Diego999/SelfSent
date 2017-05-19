@@ -1,14 +1,6 @@
 import os
-import tensorflow as tf
 import numpy as np
 import sklearn.metrics
-#from evaluate import remap_labels
-from pprint import pprint
-import pickle
-import main
-import codecs
-import utils_nlp
-import evaluate
 import utils
 import random
 

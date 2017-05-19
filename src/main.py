@@ -12,12 +12,10 @@ import sys
 import time
 import copy
 import train
-#import evaluate
 from self_sent import SelfSent
 import pickle
-import dill
 import evaluate
-from tensorflow.contrib.tensorboard.plugins import projector
+import stanford_corenlp_pywrapper
 import matplotlib
 matplotlib.use('Agg')  # http://stackoverflow.com/questions/2801882/generating-a-png-with-matplotlib-when-display-is-undefined
 
@@ -82,9 +80,11 @@ def main():
     if parameters['seed'] != -1:
         random.seed(parameters['seed'])
 
+    # Create annotator
+    annotator = stanford_corenlp_pywrapper.CoreNLP(configdict={'annotators': 'tokenize, ssplit', 'ssplit.eolonly': True}, corenlp_jars=[parameters['stanford_folder'] + '/*'])
     # Load dataset
     dataset = ds.Dataset(verbose=parameters['verbose'], debug=parameters['debug'])
-    dataset.load_dataset(dataset_filepaths, parameters)
+    dataset.load_dataset(dataset_filepaths, parameters, annotator)
 
     # Create graph and session
     with tf.Graph().as_default():
@@ -130,8 +130,7 @@ def main():
                 with open(os.path.join(model_folder, file_params), 'w') as parameters_file:
                     conf_parameters.write(parameters_file)
 
-                # TODO
-                #dill.dump(dataset, open(os.path.join(model_folder, 'dataset.pickle'), 'wb'))
+                pickle.dump(dataset, open(os.path.join(model_folder, 'dataset.pickle'), 'wb'))
 
                 # Instantiate the model
                 # graph initialization should be before FileWriter, otherwise the graph will not appear in TensorBoard
