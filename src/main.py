@@ -88,6 +88,12 @@ def main():
     dataset = ds.Dataset(verbose=parameters['verbose'], debug=parameters['debug'])
     dataset.load_dataset(dataset_filepaths, parameters, annotator)
 
+    # Adapt train/valid/test to be multiple of batch_size
+    for size in ['train_size', 'valid_size', 'test_size']:
+        if parameters['size'] % parameters['batch_size'] != 0:
+            parameters['size'] = int(parameters['size'] / parameters['batch_size']) * parameters['batch_size']
+            print('Changed {}'.format(size))
+
     # Set GPU device if more GPUs are specified
     if parameters['number_of_gpus'] > 1 and parameters['gpu_device'] != -1:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(parameters['gpu_device'])
@@ -183,6 +189,7 @@ def main():
                                     attention = attention / np.linalg.norm(attention)
                                     tokens_with_attentions.append((y_pred[sample_id][0], y_pred[sample_id][1], dataset.tokens['deploy'][sample_id], attention))
 
+                            # Plot attention
                             utils_plots.visualize_attention(tokens_with_attentions, dataset.unique_labels, output_filepaths['deploy'][:output_filepaths['deploy'].rfind('/')+1], parameters['attention_visualization_conf'])
                             break
                         elif epoch_number != 0:
