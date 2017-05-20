@@ -18,6 +18,7 @@ import pickle
 import evaluate
 import stanford_corenlp_pywrapper
 import matplotlib
+from tensorflow.python.client import device_lib
 matplotlib.use('Agg')  # http://stackoverflow.com/questions/2801882/generating-a-png-with-matplotlib-when-display-is-undefined
 
 warnings.filterwarnings('ignore')
@@ -87,6 +88,12 @@ def main():
     dataset = ds.Dataset(verbose=parameters['verbose'], debug=parameters['debug'])
     dataset.load_dataset(dataset_filepaths, parameters, annotator)
 
+    # Set GPU device if more GPUs are specified
+    if parameters['number_of_gpus'] > 1 and parameters['gpu_device'] != -1:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(parameters['gpu_device'])
+
+    # GPUs
+    print(device_lib.list_local_devices())
     # Create graph and session
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(
