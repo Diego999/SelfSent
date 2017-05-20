@@ -41,7 +41,7 @@ def load_parameters(parameters_filepath=os.path.join('.', 'parameters.ini'), ver
     for k, v in parameters.items():
         # If the value is a list delimited with a comma, choose one element at random.
         # Ensure that each parameter is cast to the correct type
-        if k in ['max_length_sentence', 'maximum_number_of_epochs', 'patience', 'seed', 'train_size', 'valid_size', 'test_size', 'remap_to_unk_count_threshold', 'token_embedding_dimension', 'number_of_cpu_threads', 'number_of_gpus', 'lstm_hidden_state_dimension', 'batch_size', 'da', 'r', 'mlp_hidden_layer_1_units']:
+        if k in ['gpu_device', 'max_length_sentence', 'maximum_number_of_epochs', 'patience', 'seed', 'train_size', 'valid_size', 'test_size', 'remap_to_unk_count_threshold', 'token_embedding_dimension', 'number_of_cpu_threads', 'number_of_gpus', 'lstm_hidden_state_dimension', 'batch_size', 'da', 'r', 'mlp_hidden_layer_1_units']:
             parameters[k] = int(v)
         elif k in ['attention_visualization_conf', 'beta_penalized', 'beta_l2', 'learning_rate', 'gradient_clipping_value', 'dropout_rate']:
             parameters[k] = float(v)
