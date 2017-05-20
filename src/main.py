@@ -70,7 +70,7 @@ def get_valid_dataset_filepaths(parameters):
 
 
 def main():
-    file_params = 'parameters.ini'
+    file_params = 'parameters_yelp_50k.ini'
     if len(sys.argv) > 1 and '.ini' in sys.argv[1]:
         file_params = sys.argv[1]
 
@@ -90,13 +90,14 @@ def main():
 
     # Adapt train/valid/test to be multiple of batch_size
     for size in ['train_size', 'valid_size', 'test_size']:
-        if parameters['size'] % parameters['batch_size'] != 0:
-            parameters['size'] = int(parameters['size'] / parameters['batch_size']) * parameters['batch_size']
+        if parameters[size] % parameters['batch_size'] != 0:
+            parameters[size] = int(parameters[size] / parameters['batch_size']) * parameters['batch_size']
             print('Changed {}'.format(size))
 
     # Set GPU device if more GPUs are specified
     if parameters['number_of_gpus'] > 1 and parameters['gpu_device'] != -1:
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(parameters['gpu_device'])
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"] = parameters['gpu_device']
 
     # GPUs
     print(device_lib.list_local_devices())
