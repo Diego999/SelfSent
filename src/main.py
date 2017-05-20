@@ -217,7 +217,7 @@ def main():
                         else:
                             bad_counter += 1
                         print("The last {0} epochs have not shown improvements on the validation set.".format(bad_counter))
-                        print("Best valid with test performances (epoch {0}): {:05.2f}%\t{:05.2f}%".format(epoch_number-bad_counter, previous_best_valid_accuracy, previous_best_test_accuracy))
+                        print("Best valid with test performances in epoch " + str(epoch_number-bad_counter) + ": {:05.2f}%\t{:05.2f}%".format(previous_best_valid_accuracy, previous_best_test_accuracy))
                         if bad_counter >= parameters['patience']:
                             print('Early Stop!')
                             results['execution_details']['early_stop'] = True
