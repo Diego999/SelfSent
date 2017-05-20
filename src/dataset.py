@@ -303,7 +303,8 @@ class Dataset(object):
 
             dataset_filepaths[dataset_type] = os.path.join(parameters['dataset_folder'], dataset_type + '.json')
             with open(dataset_filepaths[dataset_type], 'w', encoding='utf-8') as fp:
-                fp.write(''.join(data_set))
+                for d in data_set:
+                    fp.write(d)
 
             # Removed preprocessed file
             pickle_file = dataset_filepaths[dataset_type].replace('json', 'pickle')
