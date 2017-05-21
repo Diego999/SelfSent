@@ -176,11 +176,10 @@ def main():
                             y_pred, y_true, output_filepaths, attentions = train.predict_labels(sess, model, parameters, dataset, epoch_number, stats_graph_folder, dataset_filepaths, only_deploy=True)
                             y_pred = y_pred['deploy']
 
-                            # Compute attention
-                            tokens_with_attentions = []
-                            for sample_id in range(len(y_pred)):
-                                # Keep only high confidence
-                                if y_pred[sample_id][1] >= parameters['attention_visualization_conf']:
+                            with open(output_filepaths['deploy'][:output_filepaths['deploy'].rfind('/')+1] + 'attention_{}.txt'.format(parameters['attention_visualization_conf']), 'w', encoding='utf-8') as fp:
+                                # Compute attention
+                                tokens_with_attentions = []
+                                for sample_id in range(len(y_pred)):
                                     attention = attentions[int(sample_id / parameters['batch_size'])][sample_id % parameters['batch_size']]
                                     # Remove padded dimension
                                     attention = attention[:dataset.token_lengths['deploy'][sample_id]]
@@ -188,7 +187,14 @@ def main():
                                     attention = np.sum(attention, axis=1)
                                     # Normalize to sum at 1
                                     attention = attention / np.linalg.norm(attention)
-                                    tokens_with_attentions.append((y_pred[sample_id][0], y_pred[sample_id][1], dataset.tokens['deploy'][sample_id], attention))
+
+                                    # Keep only high confidence
+                                    if y_pred[sample_id][1] >= parameters['attention_visualization_conf']:
+                                        tokens_with_attentions.append((y_pred[sample_id][0], y_pred[sample_id][1], dataset.tokens['deploy'][sample_id], attention))
+
+                                    fp.write("{}\t{:05.2f}\t".format(y_pred[sample_id][0], y_pred[sample_id][1]))
+                                    fp.write(' '.join(dataset.tokens['deploy'][sample_id]) + '\t')
+                                    fp.write(' '.join([str(a) for a in attention]) + '\n')
 
                             # Plot attention
                             utils_plots.visualize_attention(tokens_with_attentions, dataset.unique_labels, output_filepaths['deploy'][:output_filepaths['deploy'].rfind('/')+1], parameters['attention_visualization_conf'])

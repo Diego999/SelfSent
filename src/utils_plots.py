@@ -19,7 +19,7 @@ def visualize_attention(token_with_attention, labels, output_folder, conf_thresh
 
     # Create HTML files (see https://www.quora.com/How-do-I-plot-attention-heatmap-on-sentences-for-sentiment-analysis)
     for k, v in output.items():
-        with open(output_folder + '{}_ge_{:.2f}.html'.format(k, conf_threshold), 'w', encoding='utf-8') as fp:
+        with open(output_folder + 'attention_{}_ge_{:.2f}.html'.format(k, conf_threshold), 'w', encoding='utf-8') as fp:
             fp.write('<!DOCTYPE html>\n<html>\n<head>\n<title>{0} STARS</title>\n<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>\n<script>\nwindow.onload=function()'.format(k) + '{\n')
             for i, (tokens, attentions) in enumerate(v):
                 fp.write('var words_{0} = ['.format(i) + '\n')

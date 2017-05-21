@@ -34,6 +34,9 @@ class Dataset(object):
         self.token_indices_padded['deploy'] = []
         self.token_indices_padded['deploy'] = [utils.pad_list(temp_token_indices, self.max_tokens, self.PADDING_TOKEN_INDEX) for temp_token_indices in self.token_indices['deploy']]
 
+        self.labels['deploy'] = []
+        self.label_vector_indices['deploy'] = []
+
     def load_dataset(self, dataset_filepaths, parameters, annotator):
         '''
             dataset_filepaths : dictionary with keys 'train', 'valid', 'test'
