@@ -23,9 +23,10 @@ def assess_model(y_pred, y_true, labels, dataset_type, stats_graph_folder, epoch
 
     # F1 scores
     results['f1_score'] = {}
+    results['f1_score']['per_label'] = {}
     for f1_average_style in ['weighted', 'micro', 'macro']:
         results['f1_score'][f1_average_style] = sklearn.metrics.f1_score(y_true, y_pred, average=f1_average_style, labels=labels)*100
-    results['f1_score']['per_label'] = [x*100 for x in sklearn.metrics.precision_recall_fscore_support(y_true, y_pred, average=None, labels=labels)[2].tolist()]
+        results['f1_score']['per_label'][f1_average_style] = [x*100 for x in sklearn.metrics.precision_recall_fscore_support(y_true, y_pred, average=f1_average_style, labels=labels)[:3]]
 
     confusion_matrix = sklearn.metrics.confusion_matrix(y_true, y_pred, labels=labels)
     results['confusion_matrix'] = confusion_matrix.tolist()
@@ -47,7 +48,7 @@ def save_results(results, stats_graph_folder):
     '''
     Save results
     '''
-    json.dump(results, open(os.path.join(stats_graph_folder, 'results.json'), 'w'), indent = 4, sort_keys=True)
+    json.dump(results, open(os.path.join(stats_graph_folder, 'results.json'), 'w'), indent=4, sort_keys=True)
 
 
 def evaluate_model(results, dataset, y_pred_all, y_true_all, stats_graph_folder, epoch_number, epoch_start_time, output_filepaths, parameters, verbose=False):
@@ -70,9 +71,8 @@ def evaluate_model(results, dataset, y_pred_all, y_true_all, stats_graph_folder,
     result_update['time_elapsed_since_train_start'] = time.time() - results['execution_details']['train_start']
     results['epoch'][epoch_number].append(result_update)
 
-    if parameters['train_model'] and 'train' in output_filepaths.keys() and 'valid' in output_filepaths.keys():
-        plot_f1_vs_epoch(results, stats_graph_folder, 'f1_score', parameters)
-        plot_f1_vs_epoch(results, stats_graph_folder, 'accuracy_score', parameters)
+    plot_f1_vs_epoch(results, stats_graph_folder, 'f1_score', parameters)
+    plot_f1_vs_epoch(results, stats_graph_folder, 'accuracy_score', parameters)
 
     results['execution_details']['train_duration'] = time.time() - results['execution_details']['train_start']
     save_results(results, stats_graph_folder)
