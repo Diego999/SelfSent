@@ -8,7 +8,13 @@ SelfSent relies on Python 3.5 and TensorFlow 1.0+
 
 # Data
 You need to create a `data` folder next to the `src` folder.
-Then for each dataset, you have to create a separate folder. In this folder, you just need to put a file `all.json` where each line correspond to a json sample with its attributes. In the case of review start prediction, the attributes are `text` and `stars`.
+Then for each dataset, you have to create a separate folder. In this folder, you just need to put a file `all.json` where each line correspond to a json sample with its attributes. 
+
+Here a sample of Yelp dataset:
+<pre>{"review_id":"IYE_M_cRsk-AhVYeYvnADg","user_id":"r-zUIQPaHzvIyL93wQaoiQ","business_id":"HE23DlZWAO_JF1VIHA60TQ",**"stars":3**,"date":"2012-10-09",**"text":"This is the Capitol Square branch."**,"useful":0,"funny":0,"cool":0,"type":"review"}</pre>
+
+In the case of review star prediction, the needed attributes are `text` and `stars`. 
+<pre>{"review_id":"IYE_M_cRsk-AhVYeYvnADg","user_id":"r-zUIQPaHzvIyL93wQaoiQ","business_id":"HE23DlZWAO_JF1VIHA60TQ",<b>"stars":3</b>,"date":"2012-10-09",<b>"text":"This is the Capitol Square branch."</b>,"useful":0,"funny":0,"cool":0,"type":"review"}</pre>
 
 The parameters `do_split` (force to split even if the pickle files exist), `training`, `valid`, `test` in `parameters.ini` will split the dataset accordingly.
 
