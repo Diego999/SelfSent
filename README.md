@@ -14,7 +14,7 @@ Here a sample of Yelp dataset:
 <pre>{"review_id":"IYE_M_cRsk-AhVYeYvnADg","user_id":"r-zUIQPaHzvIyL93wQaoiQ","business_id":"HE23DlZWAO_JF1VIHA60TQ",**"stars":3**,"date":"2012-10-09",**"text":"This is the Capitol Square branch."**,"useful":0,"funny":0,"cool":0,"type":"review"}</pre>
 
 In the case of review star prediction, the needed attributes are `text` and `stars`. 
-<pre>{"review_id":"IYE_M_cRsk-AhVYeYvnADg","user_id":"r-zUIQPaHzvIyL93wQaoiQ","business_id":"HE23DlZWAO_JF1VIHA60TQ",<b>"stars":3</b>,"date":"2012-10-09",<b>"text":"This is the Capitol Square branch."</b>,"useful":0,"funny":0,"cool":0,"type":"review"}</pre>
+<pre>{"review_id":"IYE_M_cRsk-AhVYeYvnADg",,<b>"stars":3</b>,"date":"2012-10-09",<b>"text":"This is the Capitol Square branch."</b>,"user_id":"r-zUIQPaHzvIyL93wQaoiQ","business_id":"HE23DlZWAO_JF1VIHA60TQ""useful":0,"funny":0,"cool":0,"type":"review"}</pre>
 
 The parameters `do_split` (force to split even if the pickle files exist), `training`, `valid`, `test` in `parameters.ini` will split the dataset accordingly.
 
