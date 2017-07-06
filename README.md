@@ -33,7 +33,7 @@ unzip glove.6B.100d.zip
 
 Be sure that `use_pretrained_model = false` and have at least `all.json` in the data folder.
 
-# Deploy
+# Deployment
 
 You need to have a pretrained model, which is composed of:
 - dataset.pickle
@@ -43,3 +43,8 @@ You need to have a pretrained model, which is composed of:
 - parameters.ini
 
 Don't forget to put `use_pretrained_model = true` and the path to the pretrained model folder.
+
+    
+# Issues/Pull Requests/Feedbacks
+
+Don't hesitate to contact for any feedback or create issues/pull requests.
