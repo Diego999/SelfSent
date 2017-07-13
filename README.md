@@ -4,7 +4,8 @@ Implementation in Tensorflow of [A Structured Self-attentive Sentence Embedding]
 The code organization is similar to [NeuroNER](https://arxiv.org/abs/1705.05487).
 
 # Requirements
-SelfSent relies on Python 3.5 and TensorFlow 1.0+
+SelfSent relies on Python 3.5 and TensorFlow 1.0+.
+For the package `stanford_corenlp_pywrapper`, just install it from https://github.com/mpagli/stanford_corenlp_pywrapper.
 
 # Data
 You need to create a `data` folder next to the `src` folder.
